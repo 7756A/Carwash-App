@@ -5,11 +5,11 @@ from django.db import models
 
 class CustomUser(AbstractUser):
     ROLE_CHOICES = (
-        ('tenant', 'Tenant'),
+        ('tenant_admin', 'Tenant_admin'),
         ('customer', 'Customer'),
     )
     role = models.CharField(max_length=20, choices=ROLE_CHOICES)
-    # Optionally link to Tenant or Customer profiles
+   
     tenant = models.ForeignKey('tenant.Tenant', on_delete=models.SET_NULL, null=True, blank=True)
     phone_number = models.CharField(max_length=20, blank=True, null=True)
     full_name = models.CharField(max_length=255, blank=True)

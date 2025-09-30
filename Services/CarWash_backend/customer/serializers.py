@@ -16,7 +16,7 @@ class CustomerRegisterSerializer(serializers.ModelSerializer):
             username=validated_data['username'],
             email=validated_data['email'],
             password=validated_data['password'],
-            role='Customer'  # ✅ Set role
+            role='customer'  # ✅ Set role
         )
         CustomerProfile.objects.create(user=user)  # ✅ Auto-create profile
         return user

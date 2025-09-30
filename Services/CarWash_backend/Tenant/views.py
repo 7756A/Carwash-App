@@ -4,10 +4,11 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
-
+from django.contrib.auth import authenticate
 from django.db.models import Count, Sum, Avg
 from bookings.models import Booking
 from Tenant.permissions import IsTenantAdmin
+from bookings.models import Booking
 from .serializers import (
     CarWashSerializer,
     ServiceCreateSerializer,
@@ -26,25 +27,27 @@ class AdminCreateTenant(APIView):
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
-class CustomLoginView(APIView):
+class TenantLoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
         password = request.data.get('password')
 
         user = authenticate(username=username, password=password)
 
-        if user is not None:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                "access": str(refresh.access_token),
-                "refresh": str(refresh),
-                "username": user.username,
-                "role": user.role,
-                "tenant_id": user.tenant.id if user.tenant else None
-            })
-        else:
+        if user is None:
             return Response({"detail": "Invalid credentials"}, status=status.HTTP_401_UNAUTHORIZED)
 
+        if user.role != "tenant_admin":  # ✅ restrict only to tenants
+            return Response({"detail": "This account is not a tenant account"}, status=status.HTTP_403_FORBIDDEN)
+
+        refresh = RefreshToken.for_user(user)
+        return Response({
+            "access": str(refresh.access_token),
+            "refresh": str(refresh),
+            "username": user.username,
+            "role": user.role,
+            "tenant_id": user.tenant.id if hasattr(user, "tenant") and user.tenant else None
+        })
 
 class TenantAddCarWash(APIView):
     permission_classes = [IsAuthenticated]
@@ -67,34 +70,17 @@ class TenantDashboard(APIView):
     def get(self, request):
         tenant = request.user.tenant
 
+        # Quick stats
         total_bookings = Booking.objects.filter(tenant=tenant).count()
         completed_washes = Booking.objects.filter(tenant=tenant, status='completed').count()
         pending_requests = Booking.objects.filter(tenant=tenant, status='pending').count()
-        revenue = Payment.objects.filter(tenant=tenant, status='successful').aggregate(total=Sum('amount'))['total'] or 0
-        avg_rating = Feedback.objects.filter(tenant=tenant).aggregate(score=Avg('rating'))['score'] or 0
+        revenue = (
+            Booking.objects.filter(tenant=tenant, status='completed')
+            .aggregate(total=Sum('amount'))['total'] or 0
+        )
 
-        recent_bookings = list(
-            Booking.objects.filter(tenant=tenant)
-            .select_related('customer')
-            .order_by('-created_at')[:5]
-            .values('id', 'customer__name', 'status', 'created_at')
-        )
-        recent_payments = list(
-            Payment.objects.filter(tenant=tenant)
-            .order_by('-created_at')[:5]
-            .values('id', 'amount', 'method', 'created_at')
-        )
-        recent_feedback = list(
-            Feedback.objects.filter(tenant=tenant)
-            .select_related('customer')
-            .order_by('-created_at')[:5]
-            .values('id', 'customer__name', 'comment', 'rating')
-        )
-        notifications = list(
-            Notification.objects.filter(tenant=tenant)
-            .order_by('-created_at')[:5]
-            .values('title', 'message', 'type', 'created_at')
-        )
+        # Recent bookings (last 5)
+        recent_bookings = Booking.objects.filter(tenant=tenant).order_by('-created_at')[:5]
 
         return Response({
             "quick_stats": {
@@ -102,16 +88,20 @@ class TenantDashboard(APIView):
                 "completed_washes": completed_washes,
                 "pending_requests": pending_requests,
                 "revenue": revenue,
-                "customer_satisfaction_score": round(avg_rating, 2),
             },
             "recent_activity": {
-                "bookings": recent_bookings,
-                "payments": recent_payments,
-                "feedback": recent_feedback,
-            },
-            "notifications": notifications,
+                "bookings": list(
+                    recent_bookings.values(
+                        'id',
+                        'customer__username',
+                        'service__name',
+                        'status',
+                        'amount',
+                        'created_at'
+                    )
+                )
+            }
         })
-
 
 
 

@@ -1,7 +1,6 @@
 from django.db import models
 from Tenant.models import CarWash, Tenant, Service, Staff
 from users.models import CustomUser
-from django.utils import timezone
 
 class Booking(models.Model):
     PAYMENT_METHOD_CHOICES = [
@@ -11,11 +10,16 @@ class Booking(models.Model):
     ]
 
     BOOKING_SOURCE_CHOICES = [
-    ('online', 'Online'),
-    ('walk_in', 'Walk-In'),
-]
+        ('online', 'Online'),
+        ('walk_in', 'Walk-In'),
+    ]
 
-
+    STATUS_CHOICES = [
+        ('failed', 'failed'),
+        ('confirmed', 'confirmed'),
+        ('completed', 'Completed'),
+        ('cancelled', 'Cancelled'),
+    ]
 
     tenant = models.ForeignKey(Tenant, on_delete=models.CASCADE)
     carwash = models.ForeignKey(CarWash, on_delete=models.CASCADE)
@@ -32,6 +36,8 @@ class Booking(models.Model):
     payment_method = models.CharField(max_length=20, choices=PAYMENT_METHOD_CHOICES, null=True, blank=True)
     payment_reference = models.CharField(max_length=100, null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
+
+    status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='pending')
 
     def __str__(self):
         return f"Booking #{self.id} - {self.customer.username}"
