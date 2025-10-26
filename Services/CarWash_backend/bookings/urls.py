@@ -4,6 +4,7 @@ from .views import (
     TenantBookingList,
     CreateBooking,
     mpesa_callback,
+    CustomerBookingsView
 )
 
 urlpatterns = [
@@ -15,6 +16,7 @@ urlpatterns = [
     # Customer endpoints
     
     path('customer/bookings/create/', CreateBooking.as_view(), name='create-booking'),
+    path("my-bookings/", CustomerBookingsView.as_view(), name="customer-bookings"),
 
     path('mpesa/callback/', mpesa_callback, name='mpesa-callback'),
     

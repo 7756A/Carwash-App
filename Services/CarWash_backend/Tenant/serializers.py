@@ -42,7 +42,7 @@ class TenantRegistrationSerializer(serializers.ModelSerializer):
 class CarWashSerializer(serializers.ModelSerializer):
     class Meta:
         model = CarWash
-        fields = ['id', 'name', 'location', 'description']
+        fields = ['id', 'name', 'location',  'latitude', 'longitude','description']
 
 class ServiceCreateSerializer(serializers.ModelSerializer):
     class Meta:
@@ -55,6 +55,12 @@ class ServiceCreateSerializer(serializers.ModelSerializer):
         if carwash.tenant != user.tenant:
             raise serializers.ValidationError("You can only add services to your own carwash.")
         return carwash
+
+class ServiceSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Service
+        fields = ['id', 'name', 'description', 'price', 'duration_minutes']
+        read_only_fields = fields
 
 
 class StaffSerializer(serializers.ModelSerializer):

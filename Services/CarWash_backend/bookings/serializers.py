@@ -71,3 +71,21 @@ class BookingCreateSerializer(serializers.ModelSerializer):
                 raise serializers.ValidationError({"mpesa": f"STK push failed: {str(e)}"})
 
         return booking
+    
+
+
+class BookingListSerializer(serializers.ModelSerializer):
+    carwash_name = serializers.CharField(source="carwash.name", read_only=True)
+    service_name = serializers.CharField(source="service.name", read_only=True)
+
+    class Meta:
+        model = Booking
+        fields = [
+            "id",
+            "carwash_name",
+            "service_name",
+            "time_slot",
+            "amount",
+            "status",
+            "created_at",
+        ]

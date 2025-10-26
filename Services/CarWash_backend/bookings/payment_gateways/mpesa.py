@@ -42,11 +42,17 @@ def get_access_token(consumer_key, consumer_secret, is_sandbox=True):
         raise Exception(f"❌ Unexpected error fetching token: {str(e)}")
 
 def lipa_na_mpesa(amount, phone_number, metadata):
-    carwash = CarWash.objects.get(id=metadata["carwash_id"])
-    service = Service.objects.get(id=metadata["service_id"])
-    reference = f"Booking-{metadata.get('user_id')}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
-    description = f"{service.name} at {carwash.name}"
+    import datetime
+    from Tenant.models import CarWash, Service
 
+    carwash = CarWash.objects.get(id=metadata["carwash_id"])
+    services = Service.objects.filter(id__in=metadata.get("service_ids", []))
+
+    # Combine service names into a single string
+    service_names = ", ".join([s.name for s in services])
+    
+    reference = f"Booking-{metadata.get('user_id')}-{datetime.datetime.now().strftime('%Y%m%d%H%M%S')}"
+    description = f"{service_names} at {carwash.name}"
     is_sandbox = carwash.mpesa_env == "sandbox"
     base_url = "https://sandbox.safaricom.co.ke" if is_sandbox else "https://api.safaricom.co.ke"
 

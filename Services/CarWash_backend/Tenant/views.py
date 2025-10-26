@@ -1,6 +1,6 @@
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework import status
 from rest_framework_simplejwt.views import TokenObtainPairView
 from rest_framework_simplejwt.tokens import RefreshToken
@@ -16,17 +16,48 @@ from .serializers import (
     TenantRegistrationSerializer
 )
 from .models import Tenant, CarWash, Service, Staff
+from users.models import CustomUser
 
 
 class AdminCreateTenant(APIView):
     def post(self, request):
-        serializer = TenantRegistrationSerializer(data=request.data)
-        if serializer.is_valid():
-            serializer.save()
-            return Response({"message": "Tenant and TenantAdmin created successfully."}, status=status.HTTP_201_CREATED)
-        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+        data = request.data
 
+        name = data.get("name")
+        email = data.get("email")
+        username = data.get("username")
+        password = data.get("password")
+        phone_number = data.get("phone_number")
 
+        if not all([name, email, username, password]):
+            return Response(
+                {"error": "Missing required fields (name, email, username, password)."},
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        # ✅ Step 1: Create the tenant
+        tenant = Tenant.objects.create(name=name)
+
+        # ✅ Step 2: Create the tenant admin user linked to the tenant
+        tenant_admin = CustomUser.objects.create_user(
+            username=username,
+            email=email,
+            password=password,
+            phone_number=phone_number,
+            role="tenant_admin",
+            tenant=tenant,
+            is_staff=True,
+        )
+
+        return Response(
+            {
+                "message": "Tenant and Tenant Admin created successfully.",
+                "tenant_id": tenant.id,
+                "tenant_admin": tenant_admin.username,
+            },
+            status=status.HTTP_201_CREATED,
+        )
+    
 class TenantLoginView(APIView):
     def post(self, request):
         username = request.data.get('username')
@@ -54,7 +85,7 @@ class TenantAddCarWash(APIView):
 
     def post(self, request):
         user = request.user
-        if user.role != 'TenantAdmin':
+        if user.role != 'tenant_admin':
             return Response({"error": "Only Tenant Admins can add car washes."}, status=403)
 
         serializer = CarWashSerializer(data=request.data)
@@ -105,13 +136,15 @@ class TenantDashboard(APIView):
 
 
 
+
+
 class AddServiceForTenant(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
         user = request.user
 
-        if user.role != "TenantAdmin":
+        if user.role != "tenant_admin":
             return Response({"detail": "Only TenantAdmins can add services."}, status=403)
 
         serializer = ServiceCreateSerializer(data=request.data, context={'request': request})
@@ -120,6 +153,18 @@ class AddServiceForTenant(APIView):
             return Response(serializer.data, status=201)
         return Response(serializer.errors, status=400)
 
+class CarWashServicesView(APIView):
+    permission_classes = [AllowAny]  # Anyone (customers) can view
+
+    def get(self, request, carwash_id):
+        try:
+            carwash = CarWash.objects.get(id=carwash_id)
+        except CarWash.DoesNotExist:
+            return Response({"error": "Carwash not found"}, status=status.HTTP_404_NOT_FOUND)
+
+        services = carwash.services.all()
+        serializer = ServiceSerializer(services, many=True)
+        return Response(serializer.data, status=status.HTTP_200_OK)
 
 class AddStaff(APIView):
     permission_classes = [IsAuthenticated, IsTenantAdmin]

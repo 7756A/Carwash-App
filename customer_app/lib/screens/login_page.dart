@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
-import '../main.dart';
 import 'package:carwash_frontend/screens/forget_password.dart';
+import 'package:carwash_frontend/screens/nearby_carwash.dart';
 import '../services/api_service.dart';
+import '../services/auth_service.dart';
+import '../models/booking.dart';
+import '../utils/cart_storage.dart';
 
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
@@ -26,21 +29,40 @@ class _LoginPageState extends State<LoginPage> {
         _passwordController.text.trim(),
       );
 
-      // ✅ Show login success
+      // ✅ Extract customer_id from API response
+      final customerId = result['customer_id'].toString();
+
+      // ✅ Save the JWT token along with customer_id
+      await AuthService().saveToken(result['access'], customerId: customerId);
+
+      // ✅ Load cart specific to this customer
+      final savedCart = await CartStorage.loadCart(customerId);
+
+      // ✅ Initialize empty bookings list
+      final List<Booking> bookings = [];
+
+      if (!mounted) return;
+
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login successful: ${result['username']}')),
+        const SnackBar(content: Text('Welcome! Login successful')),
       );
 
-      // Navigate to MainScreen
+      // ✅ Navigate to NearbyCarwashPage with user-specific cart
       Navigator.pushReplacement(
         context,
-        MaterialPageRoute(builder: (context) => const MainScreen()),
+        MaterialPageRoute(
+          builder: (context) => NearbyCarwashPage(
+            cart: savedCart.isNotEmpty ? savedCart : [],
+            bookings: bookings,
+          ),
+        ),
       );
     } catch (e) {
-      // ❌ Show error
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Login failed: $e')),
-      );
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Login failed: $e')));
+      }
     } finally {
       setState(() {
         _isLoading = false;
