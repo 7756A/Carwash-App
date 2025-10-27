@@ -46,18 +46,6 @@ class _NearbyCarwashPageState extends State<NearbyCarwashPage> {
     }
   }
 
-  void _goToCart() {
-    Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => CartPage(
-          cart: _cart,
-          bookings: _bookings,
-        ),
-      ),
-    ).then((_) => _loadSavedCart());
-  }
-
   void _goToMap() {
     Navigator.push(
       context,
@@ -73,105 +61,59 @@ class _NearbyCarwashPageState extends State<NearbyCarwashPage> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text("Nearby Carwashes"),
-        actions: [
-          // ✅ Cart icon with item count
-          Stack(
-            children: [
-              IconButton(
-                icon: const Icon(Icons.shopping_cart),
-                onPressed: _goToCart,
+    return FutureBuilder<List<Map<String, dynamic>>>(
+      future: _carwashFuture,
+      builder: (context, snapshot) {
+        if (snapshot.connectionState == ConnectionState.waiting) {
+          return const Center(child: CircularProgressIndicator());
+        } else if (snapshot.hasError) {
+          return Center(child: Text("Error: ${snapshot.error}"));
+        } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+          return const Center(child: Text("No carwashes found"));
+        }
+
+        final carwashes = snapshot.data!;
+        _carwashes = carwashes;
+
+        return ListView.builder(
+          itemCount: carwashes.length,
+          itemBuilder: (context, index) {
+            final carwash = carwashes[index];
+            final distance = (carwash['distance_km'] is num)
+                ? (carwash['distance_km'] as num).toStringAsFixed(2)
+                : carwash['distance_km']?.toString() ?? "--";
+
+            final carwashId = carwash['id'] is int
+                ? carwash['id']
+                : int.tryParse(carwash['id'].toString()) ?? 0;
+
+            return Card(
+              margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+              child: ListTile(
+                title: Text(carwash['name'] ?? "Unknown"),
+                subtitle: Text(
+                  "Location: ${carwash['location'] ?? "No location"}\n"
+                  "Distance: $distance km",
+                ),
+                trailing: const Icon(Icons.arrow_forward_ios),
+                onTap: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => CarwashServicesPage(
+                        carwashName: carwash['name'] ?? "Carwash",
+                        carwashId: carwashId,
+                        cart: _cart,
+                        bookings: _bookings,
+                      ),
+                    ),
+                  );
+                },
               ),
-              if (_cart.isNotEmpty)
-                Positioned(
-                  right: 8,
-                  top: 8,
-                  child: Container(
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      color: Colors.red,
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    constraints:
-                        const BoxConstraints(minWidth: 16, minHeight: 16),
-                    child: Text(
-                      '${_cart.length}',
-                      style: const TextStyle(
-                        color: Colors.white,
-                        fontSize: 10,
-                        fontWeight: FontWeight.bold,
-                      ),
-                      textAlign: TextAlign.center,
-                    ),
-                  ),
-                ),
-            ],
-          ),
-        ],
-      ),
-      body: FutureBuilder<List<Map<String, dynamic>>>(
-        future: _carwashFuture,
-        builder: (context, snapshot) {
-          if (snapshot.connectionState == ConnectionState.waiting) {
-            return const Center(child: CircularProgressIndicator());
-          } else if (snapshot.hasError) {
-            return Center(child: Text("Error: ${snapshot.error}"));
-          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
-            return const Center(child: Text("No carwashes found"));
-          }
-
-          final carwashes = snapshot.data!;
-          _carwashes = carwashes;
-
-          return ListView.builder(
-            itemCount: carwashes.length,
-            itemBuilder: (context, index) {
-              final carwash = carwashes[index];
-              final distance = (carwash['distance_km'] is num)
-                  ? (carwash['distance_km'] as num).toStringAsFixed(2)
-                  : carwash['distance_km']?.toString() ?? "--";
-
-              final carwashId = carwash['id'] is int
-                  ? carwash['id']
-                  : int.tryParse(carwash['id'].toString()) ?? 0;
-
-              return Card(
-                margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                child: ListTile(
-                  title: Text(carwash['name'] ?? "Unknown"),
-                  subtitle: Text(
-                    "Location: ${carwash['location'] ?? "No location"}\n"
-                    "Distance: $distance km",
-                  ),
-                  trailing: const Icon(Icons.arrow_forward_ios),
-                  onTap: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => CarwashServicesPage(
-                          carwashName: carwash['name'] ?? "Carwash",
-                          carwashId: carwashId,
-                          cart: _cart,
-                          bookings: _bookings,
-                          // ✅ No addToCart here anymore
-                        ),
-                      ),
-                    );
-                    _loadSavedCart(); // refresh cart count after returning
-                  },
-                ),
-              );
-            },
-          );
-        },
-      ),
-      floatingActionButton: FloatingActionButton(
-        tooltip: 'View Nearby on Map',
-        onPressed: _goToMap,
-        child: const Icon(Icons.map),
-      ),
+            );
+          },
+        );
+      },
     );
   }
 }

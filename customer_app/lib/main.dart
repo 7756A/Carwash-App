@@ -1,8 +1,8 @@
 import 'package:flutter/material.dart';
-import 'package:carwash_frontend/screens/login_page.dart';
-import 'package:carwash_frontend/screens/signup_page.dart';
-import 'package:carwash_frontend/screens/nearby_carwash.dart';
-import 'models/booking.dart';
+import 'screens/signup_page.dart';
+import 'screens/login_page.dart';
+import 'screens/main_navigation.dart';
+import '../models/booking.dart';
 
 void main() {
   runApp(const MyApp());
@@ -17,15 +17,14 @@ class MyApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'Carwash App',
       theme: ThemeData(primarySwatch: Colors.blue),
-      // 🟢 Start with SignUpPage
-      home: const SignupPage(),
-      // Optional: Named routes if you want to navigate easily
+      initialRoute: '/signup',
       routes: {
-        '/login': (context) => const LoginPage(),
         '/signup': (context) => const SignupPage(),
-        '/nearby': (context) => NearbyCarwashPage(
-              cart: const [],
-              bookings: const <Booking>[],
+        '/login': (context) => const LoginPage(),
+        // ✅ Pass empty cart/bookings initially; these will be replaced after login
+        '/main': (context) => MainNavigation(
+              initialCart: [],
+              initialBookings: [],
             ),
       },
     );

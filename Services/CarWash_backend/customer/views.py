@@ -89,3 +89,9 @@ class CarWashServicesView(APIView):
         services = Service.objects.filter(carwash_id=carwash_id)
         serializer = ServiceSerializer(services, many=True)
         return Response(serializer.data)
+    
+
+class CustomerBookingHistoryView(APIView):
+    permissions_classes = [permissions.IsAuthenticated]
+
+    

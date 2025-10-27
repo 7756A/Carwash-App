@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:geolocator/geolocator.dart';
 import 'auth_service.dart';
+import '../models/booking.dart';
 
 class ApiService {
   static const String baseUrl = "http://10.136.142.129:8000/api";
@@ -145,7 +146,7 @@ class ApiService {
     required String timeSlot,
     required String paymentMethod,
     String? mpesaNumber,
-    String? paymentReference, // ✅ Add this parameter
+    String? paymentReference,
   }) async {
     final url = Uri.parse("$baseUrl/bookings/customer/bookings/create/");
 
@@ -174,6 +175,31 @@ class ApiService {
       throw Exception("Failed to create booking: ${response.body}");
     }
   }
+
+/// ---------------- FETCH CUSTOMER BOOKINGS ----------------
+static Future<List<Booking>> fetchMyBookings() async {
+  final token = await AuthService().getToken(); // ✅ Use secure storage
+  if (token == null) throw Exception("User is not logged in.");
+
+  final response = await http.get(
+    Uri.parse('$baseUrl/bookings/my-bookings/'),
+    headers: {
+      'Authorization': 'Bearer $token', // ✅ Send JWT token
+      'Content-Type': 'application/json',
+    },
+  );
+
+  if (response.statusCode == 200) {
+    final List<dynamic> data = jsonDecode(response.body);
+    // ✅ Convert JSON list to List<Booking>
+    return data.map((json) => Booking.fromJson(json)).toList();
+  } else if (response.statusCode == 401) {
+    throw Exception('Unauthorized — token may be missing or invalid.');
+  } else {
+    throw Exception(
+        'Failed to fetch bookings: ${response.statusCode}, ${response.body}');
+  }
+}
 
   /// ---------------- HELPER ----------------
   static Map<String, dynamic> _processResponse(http.Response response) {

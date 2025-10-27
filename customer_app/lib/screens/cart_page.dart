@@ -38,7 +38,7 @@ class _CartPageState extends State<CartPage> {
         _cartItems = savedCart.map((item) {
           // Convert IDs to integers if they aren't already
           return {
-            "id": item["id"] is int ? item["id"] : int.tryParse(item["id"].toString()),
+            "service_id": item["id"] is int ? item["id"] : int.tryParse(item["id"].toString()),
             "carwash_id": item["carwash_id"] is int
                 ? item["carwash_id"]
                 : int.tryParse(item["carwash_id"].toString()),

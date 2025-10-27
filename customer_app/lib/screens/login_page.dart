@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:carwash_frontend/screens/forget_password.dart';
-import 'package:carwash_frontend/screens/nearby_carwash.dart';
+import 'package:carwash_frontend/screens/main_navigation.dart';
+
 import '../services/api_service.dart';
 import '../services/auth_service.dart';
 import '../models/booking.dart';
@@ -48,15 +49,15 @@ class _LoginPageState extends State<LoginPage> {
       );
 
       // ✅ Navigate to NearbyCarwashPage with user-specific cart
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (context) => NearbyCarwashPage(
-            cart: savedCart.isNotEmpty ? savedCart : [],
-            bookings: bookings,
-          ),
-        ),
-      );
+     Navigator.pushReplacement(
+  context,
+  MaterialPageRoute(
+    builder: (context) => MainNavigation(
+      initialCart: savedCart.isNotEmpty ? savedCart : [],
+      initialBookings: bookings,
+    ),
+  ),
+);
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(

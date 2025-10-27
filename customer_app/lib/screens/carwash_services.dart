@@ -35,55 +35,61 @@ class _CarwashServicesPageState extends State<CarwashServicesPage> {
   }
 
   /// ✅ Safe add-to-cart method
-  Future<void> _addToCart(Map<String, dynamic> service) async {
-    final int carwashId = widget.carwashId;
+Future<void> _addToCart(Map<String, dynamic> service) async {
+  final int carwashId = widget.carwashId;
 
-    // Ensure carwash ID is valid
-    if (carwashId <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid carwash ID")),
-      );
-      return;
-    }
-
-    // Extract and clean service data
-    final int serviceId = service['id'] is int
-        ? service['id']
-        : int.tryParse(service['id']?.toString() ?? '') ?? 0;
-
-    final double servicePrice = service['price'] is num
-        ? (service['price'] as num).toDouble()
-        : double.tryParse(service['price']?.toString() ?? '0') ?? 0.0;
-
-    if (serviceId <= 0) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Invalid service ID")),
-      );
-      return;
-    }
-
-    final item = {
-      "id": serviceId,
-      "carwash_id": carwashId,
-      "name": service['name']?.toString() ?? "Unknown",
-      "price": servicePrice,
-    };
-
-    setState(() {
-      _cart.add(item);
-    });
-
-    final customerId = await AuthService().getCustomerId();
-    if (customerId != null) {
-      await CartStorage.saveCart(customerId, _cart);
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('${item['name']} added to cart!')),
-      );
-    }
+  if (carwashId <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Invalid carwash ID")),
+    );
+    return;
   }
+
+  // Clean and validate service ID
+  final int? serviceId = int.tryParse(service['id']?.toString() ?? '');
+  if (serviceId == null || serviceId <= 0) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Invalid service ID")),
+    );
+    return;
+  }
+
+  // Clean and validate price
+  final double servicePrice = (service['price'] is num)
+      ? (service['price'] as num).toDouble()
+      : double.tryParse(service['price']?.toString() ?? '0') ?? 0.0;
+
+  // ✅ Avoid duplicates (same service ID & carwash)
+  final alreadyInCart = _cart.any((item) =>
+      item['id'] == serviceId && item['carwash_id'] == carwashId);
+  if (alreadyInCart) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text("${service['name']} is already in your cart.")),
+    );
+    return;
+  }
+
+  final item = {
+    "id": serviceId,
+    "carwash_id": carwashId,
+    "name": service['name']?.toString() ?? "Unknown",
+    "price": servicePrice,
+  };
+
+  setState(() => _cart.add(item));
+
+  final customerId = await AuthService().getCustomerId();
+  if (customerId != null) {
+    await CartStorage.saveCart(customerId, _cart);
+  }
+
+  if (mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('${item['name']} added to cart!')),
+    );
+  }
+}
+
 
   void goToCart() {
     Navigator.push(

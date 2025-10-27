@@ -80,28 +80,34 @@ class _CarwashMapPageState extends State<CarwashMapPage> {
           ? carwash['id']
           : int.tryParse(carwash['id'].toString()) ?? 0;
 
+      final name = carwash['name'] ?? "Unnamed Carwash";
+
       return Marker(
         point: LatLng(lat, lon),
-        width: 60,
-        height: 60,
+        width: 80,
+        height: 80,
         child: GestureDetector(
           onTap: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (context) => CarwashServicesPage(
-                  carwashName: carwash['name'] ?? "Carwash",
-                  carwashId: carwashId,
-                  cart: widget.cart,
-                  bookings: widget.bookings,
+            _showCarwashInfo(name, carwashId);
+          },
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.local_car_wash, color: Colors.blueAccent, size: 35),
+              const SizedBox(height: 4),
+              Container(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                decoration: BoxDecoration(
+                  color: Colors.white.withOpacity(0.8),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  name,
+                  style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+                  overflow: TextOverflow.ellipsis,
                 ),
               ),
-            );
-          },
-          child: const Icon(
-            Icons.local_car_wash,
-            color: Colors.blueAccent,
-            size: 35,
+            ],
           ),
         ),
       );
@@ -129,6 +135,47 @@ class _CarwashMapPageState extends State<CarwashMapPage> {
     });
   }
 
+  void _showCarwashInfo(String name, int carwashId) {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.white,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (context) => Padding(
+        padding: const EdgeInsets.all(16.0),
+        child: Wrap(
+          alignment: WrapAlignment.center,
+          children: [
+            Text(
+              name,
+              style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            const SizedBox(height: 10),
+            ElevatedButton.icon(
+              icon: const Icon(Icons.list),
+              label: const Text("View Services"),
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => CarwashServicesPage(
+                      carwashName: name,
+                      carwashId: carwashId,
+                      cart: widget.cart,
+                      bookings: widget.bookings,
+                    ),
+                  ),
+                );
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final initialCenter = _currentPosition ??
@@ -137,10 +184,13 @@ class _CarwashMapPageState extends State<CarwashMapPage> {
                 double.tryParse(widget.carwashes[0]['latitude']?.toString() ?? '0') ?? 0.0,
                 double.tryParse(widget.carwashes[0]['longitude']?.toString() ?? '0') ?? 0.0,
               )
-            : const LatLng(-1.286389, 36.817223));
+            : const LatLng(-1.286389, 36.817223)); // Default Nairobi
 
     return Scaffold(
-      appBar: AppBar(title: const Text("Nearby Carwashes (Map)")),
+      appBar: AppBar(
+        title: const Text("Nearby Carwashes (Map)"),
+        backgroundColor: Colors.blueAccent,
+      ),
       body: FlutterMap(
         mapController: _mapController,
         options: MapOptions(
